@@ -1,4 +1,5 @@
 using System.Text;
+using API;
 using API.Data;
 using API.Interfaces;
 using API.Services;
@@ -35,6 +36,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseMiddleware<ExceptionMiddleware>();
 app.UseCors(x => x.AllowAnyHeader().AllowAnyMethod()
     .WithOrigins("http://localhost:4200", "https://localhost:4200"));
 
@@ -44,4 +46,19 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.Use(async (context, next) =>
+{
+    // // Put your breakpoint here
+    // await next();
+
+    context.Request.EnableBuffering();
+
+    using var reader = new StreamReader(context.Request.Body, leaveOpen: true);
+    string body = await reader.ReadToEndAsync();
+
+    context.Request.Body.Position = 0; // Reset so MVC can read it later
+
+    // ⛔ Breakpoint here — body is now visible in debugger
+    await next();
+});
 app.Run();

@@ -2,25 +2,38 @@
     <div style="text-align: center;">
 
         @if(!registerMode){
-            <h1>Find your match</h1>
-            <p class="lead">Come on in to view your matches... all you need to do is sign up!</p>
-            <div class="text- center">
-                <button (click)="registerToggle()" class="btn btn-primary btn-lg me-2">Register</button>
-                <button class="btn btn-info btn-lg me-2">Learn more</button>
-            </div>
+        <h1>Find your match</h1>
+        <p class="lead">Come on in to view your matches... all you need to do is sign up!</p>
+        <div class="text- center">
+            <button (click)="registerToggle()" class="btn btn-primary btn-lg me-2">Register</button>
+            <button class="btn btn-info btn-lg me-2">Learn more</button>
+        </div>
         }
         @else{
-            <div class="container">
-                <div class="row justify-content-center">
-                    <div class="col-4">
-                        <!-- <p>Register form goes here</p> -->
-                         <app-register 
-                         (cancelRegister)="cancelRegisterMode($event)"
-                         ></app-register>
-                    </div>
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-4">
+                    <!-- <p>Register form goes here</p> -->
+                    <app-register (cancelRegister)="cancelRegisterMode($event)"></app-register>
                 </div>
             </div>
+        </div>
         }
 
+    </div>
+    <div class="container">
+        <h2>Users</h2>
+
+        @if (users?.length > 0) {
+        <ul>
+            @for (user of users; track user.id) {
+            <li>
+                <strong>{{ user.userName }}</strong>
+            </li>
+            }
+        </ul>
+        } @else {
+        <p>No users found.</p>
+        }
     </div>
 </div>
