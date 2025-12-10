@@ -1,36 +1,14 @@
 using System.Text;
 using API;
 using API.Data;
-using API.Interfaces;
-using API.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using API.Extensions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
-builder.Services.AddDbContext<DataContext>(opt =>
-{
-    opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
-});
-builder.Services.AddCors();
-builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        var tokenKey = builder.Configuration["TokenKey"]
-            ?? throw new Exception("TokenKey not found");
-
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenKey)),
-            ValidateIssuer = false,
-            ValidateAudience = false
-        };
-    });
+builder.Services.AddAplicationServices(builder.Configuration);
+builder.Services.AddIdentityServices(builder.Configuration);
 
 
 var app = builder.Build();
@@ -46,19 +24,62 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.Use(async (context, next) =>
+using var scope = app.Services.CreateScope();
+var services = scope.ServiceProvider;
+
+try
 {
-    // // Put your breakpoint here
-    // await next();
+    var context = services.GetRequiredService<DataContext>();
+    await context.Database.MigrateAsync();
+    await Seed.SeedUsers(context);
+}
+catch (Exception ex)
+{
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "An error occured during migration");
+}
 
-    context.Request.EnableBuffering();
+// app.Use(async (context, next) =>
+// {
+    
+//     // Log method, path, and query string
+//     Console.WriteLine($"HTTP {context.Request.Method} {context.Request.Path}{context.Request.QueryString}");
 
-    using var reader = new StreamReader(context.Request.Body, leaveOpen: true);
-    string body = await reader.ReadToEndAsync();
+//     // Log headers
+//     foreach (var header in context.Request.Headers)
+//     {
+//         Console.WriteLine($"Header: {header.Key} = {header.Value}");
+//     }
 
-    context.Request.Body.Position = 0; // Reset so MVC can read it later
+//     // Log cookies (optional)
+//     foreach (var cookie in context.Request.Cookies)
+//     {
+//         Console.WriteLine($"Cookie: {cookie.Key} = {cookie.Value}");
+//     }
 
-    // ⛔ Breakpoint here — body is now visible in debugger
-    await next();
-});
+
+//     context.Request.EnableBuffering();
+
+//     using var reader = new StreamReader(
+//         context.Request.Body,
+//         encoding: Encoding.UTF8,
+//         detectEncodingFromByteOrderMarks: false,
+//         leaveOpen: true
+//     );
+
+//     string body = await reader.ReadToEndAsync();
+
+//     context.Request.Body.Position = 0;
+
+
+//     Console.WriteLine($"HTTP BODY REQUEST: \n\n{body}\n\n");
+
+//     // using var reader = new StreamReader(context.Request.Body, leaveOpen: true);
+//     // string body = await reader.ReadToEndAsync();
+
+//     // context.Request.Body.Position = 0; // Reset so MVC can read it later
+
+//     // // ⛔ Breakpoint here — body is now visible in debugger
+//     await next();
+// });
 app.Run();
