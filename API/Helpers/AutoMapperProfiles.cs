@@ -19,4 +19,3 @@ public class AutoMapperProfiles : Profile
         CreateMap<MemberUpdateDto, AppUser>();
     }
 }
- 
